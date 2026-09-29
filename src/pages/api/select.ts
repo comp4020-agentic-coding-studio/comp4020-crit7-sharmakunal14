@@ -1,17 +1,24 @@
 import type { APIRoute } from "astro";
-import { addMessage } from "../../lib/db";
+import { selectSession } from "../../lib/db";
 import { bus } from "../../lib/events";
 
-// The write half of the demo: a plain HTML form POSTs here, the message goes
-// into SQLite, and the new row is broadcast to every open SSE connection.
-// The 303 redirect makes the form work with no client-side JavaScript at all
-// — the submitting tab re-renders from the database; every *other* tab hears
-// about it over the stream.
+// The write half of the app: a plain HTML form POSTs a sessionId here. On a
+// clash the redirect carries the reason so the page can show it; the 303
+// redirect either way makes the form work with no client-side JavaScript —
+// the submitting tab re-renders from the database; every *other* tab hears
+// about a successful selection over the SSE stream.
 export const POST: APIRoute = async ({ request, redirect }) => {
   const form = await request.formData();
-  const body = String(form.get("body") ?? "").trim();
-  if (body) {
-    bus.emit("message", addMessage(body.slice(0, 500)));
+  const sessionId = Number(form.get("sessionId"));
+  if (!Number.isInteger(sessionId)) {
+    return redirect("/", 303);
   }
+
+  const result = selectSession(sessionId);
+  if (!result.ok) {
+    return redirect(`/?error=clash&with=${encodeURIComponent(result.withCourse)}`, 303);
+  }
+
+  bus.emit("selection", sessionId);
   return redirect("/", 303);
 };
