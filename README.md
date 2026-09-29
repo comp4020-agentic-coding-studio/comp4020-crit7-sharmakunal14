@@ -1,18 +1,35 @@
-# Your prototype
+# My Timetable, one small chunk of it
 
-<!-- TEMPLATE: this file is yours, and the deployed app publishes it in full at
-     /readme/ --- a visitor reads it before they touch the app, and so does the
-     marker. Replace everything in it, this comment included. -->
-
-What this is, in a paragraph: the thing, and what it's for.
+ANU's MyTimetable lets you pick which tutorial or lab session you want for
+each enrolled course, and stops you picking two that overlap in time. This
+is that one job, built end to end: a fixed set of courses, each with a
+handful of session options; pick one per course; the app rejects a pick
+that clashes with a session you've already chosen for another course, and
+your picks build up into a weekly grid that survives a reload.
 
 ## What good looks like here
 
-Say what good means for this app: what you decided, what you read or looked at
-while deciding, and what you chose not to build. The rules that decision
-produced live in `CLAUDE.md` and the checks that protect it live in `spec/`;
-this is the argument they came from, so say which parts of good are enforced and
-which are judgement calls.
+- **The clash rule is enforced, not just suggested.** `selectSession` in
+  `src/lib/db.ts` checks every other course's current selection for a
+  time overlap before writing, inside a transaction — the check and the
+  write can't be raced apart. `spec/timetable.test.ts` drives this over
+  HTTP: a clashing pick is rejected, and the original selections are
+  unchanged.
+- **A course has at most one selection.** That's a database constraint
+  (`selections.course_id` is unique, see `src/lib/schema.ts`), not just UI
+  discipline — picking a new session for a course you've already chosen
+  replaces the old one, rather than adding a second row.
+- **Picks persist across a reload.** They're written to SQLite on the
+  machine's volume, the same as the starter's guestbook; `spec/timetable.test.ts`
+  checks a fresh page load still shows a selection made earlier.
 
-Images go in `public/` and are linked relatively --- `![alt](public/before.png)`
---- which renders on GitHub and at `/readme/` alike.
+## What's a deliberate cut, not an oversight
+
+- **No accounts.** There's one shared timetable, like the starter's
+  guestbook was one shared message list — building login wasn't the point
+  of this slice.
+- **The course catalogue is fixed, seeded data.** Real MyTimetable models
+  enrolment separately; here the four courses and their session options
+  are seeded once and aren't editable.
+- **Only tutorials/labs are modeled**, not lectures (usually fixed, no
+  choice to make) or capacity/waitlists.

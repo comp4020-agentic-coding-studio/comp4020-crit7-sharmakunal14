@@ -1,8 +1,19 @@
 ---
-import { listMessages } from "../lib/db";
+import { listCoursesWithSessions, listSelectedSessions } from "../lib/db";
+import { DAYS } from "../lib/schema";
 import "../styles.css";
 
-const messages = listMessages();
+const courses = listCoursesWithSessions();
+const selected = listSelectedSessions();
+
+const HOURS = Array.from({ length: 8 }, (_, i) => i + 9); // 9am .. 4pm start
+
+const error = Astro.url.searchParams.get("error");
+const clashWith = Astro.url.searchParams.get("with");
+
+function cellSession(day: string, hour: number) {
+  return selected.find((s) => s.day === day && s.startHour <= hour && hour < s.endHour);
+}
 ---
 
 <!doctype html>
@@ -10,43 +21,103 @@ const messages = listMessages();
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>COMP4020 prototype</title>
+    <title>My Timetable — COMP4020 prototype</title>
   </head>
   <body>
     <nav aria-label="site">
-      <a href="/">Guestbook</a>
+      <a href="/">Timetable</a>
       <a href="/readme/">About</a>
     </nav>
     <main>
-      <h1>Guestbook</h1>
+      <h1>My Timetable</h1>
       <p>
-        A minimal full-stack starter: messages live in SQLite on the machine's
-        volume (state survives a reload and a redeploy), and new messages
-        appear in every open tab over a server-sent-events stream — open this
-        page twice and sign it in one. Replace all of this with your own
-        prototype.
+        A slice of ANU's MyTimetable: pick one session per course from a
+        fixed set of options. Picking a session that overlaps a session
+        you've already chosen for another course is rejected; picking a new
+        one for a course you've already chosen replaces the old pick.
       </p>
-      <form method="post" action="/api/messages">
-        <label for="body">Leave a message</label>
-        <input id="body" name="body" required maxlength="500" />
-        <button>Sign</button>
-      </form>
-      <ul id="messages">
-        {messages.map((message) => <li>{message.body}</li>)}
-      </ul>
+
+      {
+        error === "clash" && (
+          <p role="alert" class="error">
+            That session clashes with your {clashWith} session — pick another
+            time.
+          </p>
+        )
+      }
+
+      <section aria-labelledby="courses-heading">
+        <h2 id="courses-heading">Courses</h2>
+        {
+          courses.map((course) => (
+            <article>
+              <h3>
+                {course.code} — {course.name}
+              </h3>
+              <ul class="options">
+                {course.options.map((option) => {
+                  const isSelected = option.id === course.selectedSessionId;
+                  return (
+                    <li>
+                      <form method="post" action="/api/select">
+                        <input type="hidden" name="sessionId" value={option.id} />
+                        <button aria-pressed={isSelected} disabled={isSelected}>
+                          {isSelected ? "✓ " : ""}
+                          {option.label}: {option.day} {option.startHour}:00–
+                          {option.endHour}:00, {option.location}
+                        </button>
+                      </form>
+                    </li>
+                  );
+                })}
+              </ul>
+            </article>
+          ))
+        }
+      </section>
+
+      <section aria-labelledby="grid-heading">
+        <h2 id="grid-heading">Your week</h2>
+        <table id="timetable-grid">
+          <thead>
+            <tr>
+              <th scope="col">Time</th>
+              {DAYS.map((day) => <th scope="col">{day}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {HOURS.map((hour) => (
+              <tr>
+                <th scope="row">{hour}:00</th>
+                {DAYS.map((day) => {
+                  const session = cellSession(day, hour);
+                  return (
+                    <td>
+                      {session && session.startHour === hour ? (
+                        <span>
+                          {session.course.code}
+                          <br />
+                          {session.label}
+                        </span>
+                      ) : (
+                        session ? "" : "—"
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
     </main>
     <script>
-      // The live half of the demo: subscribe to the SSE stream and prepend
-      // messages as they arrive. The form itself needs none of this — its
-      // POST + redirect re-renders the submitting tab from SQLite; this
-      // stream is how every other tab finds out.
-      const list = document.querySelector("#messages");
+      // Another tab picked a session: the simplest correct thing is to
+      // re-render from the database, since a selection can move or replace
+      // cells anywhere in the grid.
       const source = new EventSource("/api/events");
-      source.addEventListener("message", (event) => {
-        const message = JSON.parse(event.data);
-        const item = document.createElement("li");
-        item.textContent = message.body;
-        list?.prepend(item);
+      source.addEventListener("message", () => {
+        location.reload();
       });
     </script>
   </body>
