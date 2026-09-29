@@ -1,54 +1,51 @@
 # Process overview
 
-<!-- TEMPLATE: this file is a shape to fill in, not a form. Replace everything
-     in it with your own overview, and delete this comment — `pnpm
-     check:evidence` will remind you if it's still here. -->
-
-Written by you, for a reader: how you got from the brief to the harness and
-agentic workflow behind this submission. Markers read this file and follow its
-citations; they don't trawl the repo for evidence you didn't point at.
-
-This file is the shape; the course site's
-[assessment page](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#what-you-submit)
-is the requirement, and its
-[word counts](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#word-counts)
-cover every deliverable.
-
 ## What I built
 
-A sentence or two. `README.md` is where the account of what the app is and what
-good means here lives; this file is how you got there.
+The one clash-avoidance chunk of ANU's MyTimetable: pick a tutorial/lab
+session per course from a fixed catalogue, and the app rejects a pick that
+overlaps a session you've already chosen for another course. `README.md`
+covers what "good" means here in more depth.
 
 ## How I got here
 
-The account of the process: how the work actually went, and how you knew the
-result was right. Tell it in whatever order makes it clear. A weekly prototype
-needs a paragraph or two; an assignment needs more.
+I started from the `template-dynamic` starter
+([`dcb7f1f`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-sharmakunal14/commit/dcb7f1f25564d35d730a92ffe2bb2b9c546800a2))
+and asked for a plan before touching code, since the brief ("build the ANU
+system you wish existed") was open enough to drift into scope I didn't want:
 
-Cite the record as you go, as links whose text is the commit hash or range and
-whose target is this repo's commit or compare URL, so a reader clicks straight
-to the evidence:
+> what i mean is that timetabling for students at mytimetable, i wanna
+> rebuild that small chunk of it.
 
-- one commit: [`a1b2c3d`](https://github.com/YOUR-ORG/YOUR-REPO/commit/a1b2c3d)
-- a range:
-  [`a1b2c3d...e4f5a6b`](https://github.com/YOUR-ORG/YOUR-REPO/compare/a1b2c3d...e4f5a6b)
+From the approved plan, the guestbook starter was replaced end to end in three
+commits: schema first
+([`144bf18`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-sharmakunal14/commit/144bf18aaaf36527b6e80d7518f3c4ceb5efd5b3)) —
+`courses`/`sessions`/`selections`, with a `unique()` constraint on
+`selections.course_id` so "one selection per course" is a database invariant,
+not UI discipline — then the backend
+([`f31539d`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-sharmakunal14/commit/f31539d12106376754b303dcb667b5fd9d580468)),
+where the clash check (`overlaps`) and the write happen inside one
+`db.transaction()` in `selectSession`, then the frontend and README
+([`e3426bc`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-sharmakunal14/commit/e3426bc63753253742a76c33018c1c2a409f9b95)).
 
-To pair a prompt with the commit it produced, quote the prompt (curated, not a
-full transcript) next to the citation:
+I didn't take the clash logic on faith. The seed data in `src/lib/db.ts` was
+written with a deliberate clash built in (COMP1010 and COMP2100 both offer a
+Mon 10–11 tutorial), and `spec/timetable.test.ts`
+([`b2f1284`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-sharmakunal14/commit/b2f128487ec6997c5cd29dbb9aa78bdee1b0b1dc))
+drives the built app over HTTP to check three things the plan named as the
+actual claims of the feature: a selection persists across a reload, a
+clashing pick is rejected without disturbing the existing selection, and
+picking a different session for a course you've already chosen replaces the
+old pick instead of adding a second row. All three also passed manually
+against the deployed app at `https://comp4020-crit7-sharmakunal14.fly.dev/`
+after `flyctl deploy`, by POSTing to `/api/select` directly and checking the
+redirect and the reloaded page.
 
-> the prompt, verbatim
-
-Screenshots are welcome where one carries the point better than a sentence does.
-Commit the file to this repo and link it with a **relative** path, which is what
-makes it render on GitHub: `![alt text](docs/before.png)`. Images don't count
-towards the word count and don't replace the citation.
+`pnpm check` (typecheck + build + the full spec suite, run through `mise exec`
+so it uses the pinned Node 24 rather than the system default) was green
+before each commit.
 
 ## Before you ship
 
-`pnpm check:evidence` verifies that this comment is gone, that your citations
-resolve to real commits, that a crit week's reflection entry is in
-`reflections/`, and that your `CLAUDE.md` is there. It checks that your account
-is traceable, not that it is good: that is the marker's call.
-
-Images aren't checked: unlike a citation whose SHA doesn't resolve, a broken
-image is visible the moment this file is rendered on GitHub.
+Verified: `pnpm check:evidence` passes, citations above resolve to commits on
+`main` in this repo, and `reflections/crit-7.md` exists.
