@@ -40,90 +40,162 @@ function cellSession(day: string, hour: number) {
 
       {
         error === "clash" && (
-          <p role="alert" class="error clash-banner">
-            ⚠ Clash: that session overlaps your {clashWith} session — pick
-            another time, or unselect {clashWith} first.
+          <p role="alert" class="alert">
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 9v4" />
+              <path d="M12 17h.01" />
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            </svg>
+            <span>
+              Clash: that session overlaps your {clashWith} session — pick
+              another time, or unselect {clashWith} first.
+            </span>
           </p>
         )
       }
 
       <section aria-labelledby="courses-heading">
         <h2 id="courses-heading">Courses</h2>
-        {
-          courses.map((course) => (
-            <article class={course.code === clashWith ? "clash-existing" : ""}>
-              <h3>
-                {course.code} — {course.name}
-              </h3>
-              <ul class="options">
-                {course.options.map((option) => {
-                  const isSelected = option.id === course.selectedSessionId;
-                  const isAttempted = option.id === attemptedSessionId;
-                  return (
-                    <li>
-                      <form method="post" action="/api/select">
-                        <input type="hidden" name="sessionId" value={option.id} />
-                        <button
-                          aria-pressed={isSelected}
-                          disabled={isSelected}
-                          class={isAttempted ? "clash-attempted" : ""}
+        <ul class="courses">
+          {
+            courses.map((course) => (
+              <li
+                class={`course-card${course.code === clashWith ? " clash-existing" : ""}`}
+              >
+                <h3>{course.code}</h3>
+                <p class="course-name">{course.name}</p>
+                <ul class="options">
+                  {course.options.map((option) => {
+                    const isSelected = option.id === course.selectedSessionId;
+                    const isAttempted = option.id === attemptedSessionId;
+                    return (
+                      <li>
+                        <form method="post" action="/api/select">
+                          <input type="hidden" name="sessionId" value={option.id} />
+                          <button
+                            aria-pressed={isSelected}
+                            disabled={isSelected}
+                            class={`option-btn${isAttempted ? " clash-attempted" : ""}`}
+                          >
+                            <span class="option-icon" aria-hidden="true">
+                              {isSelected && (
+                                <svg
+                                  viewBox="0 0 24 24"
+                                  width="16"
+                                  height="16"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  stroke-width="2.5"
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                >
+                                  <polyline points="4 12 9 17 20 6" />
+                                </svg>
+                              )}
+                              {isAttempted && (
+                                <svg
+                                  viewBox="0 0 24 24"
+                                  width="16"
+                                  height="16"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  stroke-width="2"
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                >
+                                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                  <path d="M12 9v4" />
+                                  <path d="M12 17h.01" />
+                                </svg>
+                              )}
+                            </span>
+                            <span>
+                              {option.label}: {option.day} {option.startHour}:00–
+                              {option.endHour}:00, {option.location}
+                            </span>
+                          </button>
+                        </form>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {
+                  course.selectedSessionId && (
+                    <form method="post" action="/api/unselect">
+                      <input type="hidden" name="courseId" value={course.id} />
+                      <button class="btn-unselect">
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="14"
+                          height="14"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
                         >
-                          {isSelected ? "✓ " : ""}
-                          {isAttempted ? "⚠ " : ""}
-                          {option.label}: {option.day} {option.startHour}:00–
-                          {option.endHour}:00, {option.location}
-                        </button>
-                      </form>
-                    </li>
-                  );
-                })}
-              </ul>
-              {
-                course.selectedSessionId && (
-                  <form method="post" action="/api/unselect">
-                    <input type="hidden" name="courseId" value={course.id} />
-                    <button class="unselect">Unselect {course.code}</button>
-                  </form>
-                )
-              }
-            </article>
-          ))
-        }
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                        Unselect {course.code}
+                      </button>
+                    </form>
+                  )
+                }
+              </li>
+            ))
+          }
+        </ul>
       </section>
 
       <section aria-labelledby="grid-heading">
         <h2 id="grid-heading">Your week</h2>
-        <table id="timetable-grid">
-          <thead>
-            <tr>
-              <th scope="col">Time</th>
-              {DAYS.map((day) => <th scope="col">{day}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {HOURS.map((hour) => (
+        <div class="grid-scroll">
+          <table id="timetable-grid">
+            <thead>
               <tr>
-                <th scope="row">{hour}:00</th>
-                {DAYS.map((day) => {
-                  const session = cellSession(day, hour);
-                  return (
-                    <td>
-                      {session && session.startHour === hour ? (
-                        <span>
-                          {session.course.code}
-                          <br />
-                          {session.label}
-                        </span>
-                      ) : (
-                        session ? "" : "—"
-                      )}
-                    </td>
-                  );
-                })}
+                <th scope="col">Time</th>
+                {DAYS.map((day) => <th scope="col">{day}</th>)}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {HOURS.map((hour) => (
+                <tr>
+                  <th scope="row">{hour}:00</th>
+                  {DAYS.map((day) => {
+                    const session = cellSession(day, hour);
+                    return (
+                      <td>
+                        {session && session.startHour === hour ? (
+                          <span class="grid-session">
+                            {session.course.code}
+                            <br />
+                            {session.label}
+                          </span>
+                        ) : session ? (
+                          ""
+                        ) : (
+                          <span class="grid-empty">—</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </main>
     <script>
