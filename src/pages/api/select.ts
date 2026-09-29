@@ -16,7 +16,12 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 
   const result = selectSession(sessionId);
   if (!result.ok) {
-    return redirect(`/?error=clash&with=${encodeURIComponent(result.withCourse)}`, 303);
+    const params = new URLSearchParams({
+      error: "clash",
+      with: result.withCourse,
+      attempted: String(sessionId),
+    });
+    return redirect(`/?${params}`, 303);
   }
 
   bus.emit("selection", sessionId);

@@ -154,3 +154,9 @@ export function selectSession(sessionId: number): SelectResult {
     return { ok: true } as const;
   });
 }
+
+// Clears a course's selection, if it has one. Not an error to call this on a
+// course with nothing selected — it's just a no-op delete.
+export function unselectCourse(courseId: number): void {
+  db.delete(selections).where(eq(selections.courseId, courseId)).run();
+}

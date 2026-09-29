@@ -23,6 +23,14 @@ describe("timetable", () => {
       redirect: "manual",
     });
 
+  const unselect = (courseId: number) =>
+    fetch(new URL("/api/unselect", baseUrl), {
+      method: "POST",
+      headers: { origin: baseUrl },
+      body: new URLSearchParams({ courseId: String(courseId) }),
+      redirect: "manual",
+    });
+
   beforeAll(async () => {
     // establish a known starting point: COMP1010's Tutorial 1 selected
     const res = await select(1);
@@ -41,10 +49,14 @@ describe("timetable", () => {
     const location = res.headers.get("location") ?? "";
     expect(location).toContain("error=clash");
     expect(location).toContain("with=COMP1010");
+    expect(location).toContain("attempted=3");
 
-    // the original selection is untouched
-    const page = await fetch(baseUrl).then((r) => r.text());
+    // the original selection is untouched, and the redirect's own params
+    // are enough for the page to point at both sides of the clash
+    const page = await fetch(new URL(location, baseUrl)).then((r) => r.text());
     expect(page).toContain("COMP1010");
+    expect(page).toMatch(/clash-existing/);
+    expect(page).toMatch(/clash-attempted/);
   });
 
   it("replaces a course's own prior selection instead of rejecting it", async () => {
@@ -56,5 +68,20 @@ describe("timetable", () => {
     expect(page).toContain("Tutorial 2");
     // the earlier Tutorial 1 pick for COMP1010 is gone, replaced not duplicated
     expect(page).not.toMatch(/✓ Tutorial 1/);
+  });
+
+  it("unselects a course's session, freeing its slot for other courses", async () => {
+    const res = await unselect(1); // COMP1010's course id, matching seed order
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe("/");
+
+    const page = await fetch(baseUrl).then((r) => r.text());
+    expect(page).not.toMatch(/✓ Tutorial 2/);
+
+    // the slot COMP1010 held is free again, so the clashing COMP2100 option
+    // that was rejected earlier now succeeds
+    const clashResolved = await select(3);
+    expect(clashResolved.status).toBe(303);
+    expect(clashResolved.headers.get("location")).toBe("/");
   });
 });

@@ -22,6 +22,14 @@ your picks build up into a weekly grid that survives a reload.
 - **Picks persist across a reload.** They're written to SQLite on the
   machine's volume, the same as the starter's guestbook; `spec/timetable.test.ts`
   checks a fresh page load still shows a selection made earlier.
+- **A clash is highlighted, not just named.** A rejected pick redirects with
+  both sides of the clash in the URL, so the page can outline the course
+  card you already hold that slot in and the option you just tried, on top
+  of the alert banner.
+- **A course's selection can be cleared outright**, not just swapped. Every
+  course with a current pick shows an "Unselect" button (`POST /api/unselect`),
+  freeing that slot — useful when the fix for a clash is to drop a pick
+  rather than move it.
 
 ## What's a deliberate cut, not an oversight
 

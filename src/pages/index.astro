@@ -10,6 +10,7 @@ const HOURS = Array.from({ length: 8 }, (_, i) => i + 9); // 9am .. 4pm start
 
 const error = Astro.url.searchParams.get("error");
 const clashWith = Astro.url.searchParams.get("with");
+const attemptedSessionId = Number(Astro.url.searchParams.get("attempted")) || null;
 
 function cellSession(day: string, hour: number) {
   return selected.find((s) => s.day === day && s.startHour <= hour && hour < s.endHour);
@@ -39,9 +40,9 @@ function cellSession(day: string, hour: number) {
 
       {
         error === "clash" && (
-          <p role="alert" class="error">
-            That session clashes with your {clashWith} session — pick another
-            time.
+          <p role="alert" class="error clash-banner">
+            ⚠ Clash: that session overlaps your {clashWith} session — pick
+            another time, or unselect {clashWith} first.
           </p>
         )
       }
@@ -50,19 +51,25 @@ function cellSession(day: string, hour: number) {
         <h2 id="courses-heading">Courses</h2>
         {
           courses.map((course) => (
-            <article>
+            <article class={course.code === clashWith ? "clash-existing" : ""}>
               <h3>
                 {course.code} — {course.name}
               </h3>
               <ul class="options">
                 {course.options.map((option) => {
                   const isSelected = option.id === course.selectedSessionId;
+                  const isAttempted = option.id === attemptedSessionId;
                   return (
                     <li>
                       <form method="post" action="/api/select">
                         <input type="hidden" name="sessionId" value={option.id} />
-                        <button aria-pressed={isSelected} disabled={isSelected}>
+                        <button
+                          aria-pressed={isSelected}
+                          disabled={isSelected}
+                          class={isAttempted ? "clash-attempted" : ""}
+                        >
                           {isSelected ? "✓ " : ""}
+                          {isAttempted ? "⚠ " : ""}
                           {option.label}: {option.day} {option.startHour}:00–
                           {option.endHour}:00, {option.location}
                         </button>
@@ -71,6 +78,14 @@ function cellSession(day: string, hour: number) {
                   );
                 })}
               </ul>
+              {
+                course.selectedSessionId && (
+                  <form method="post" action="/api/unselect">
+                    <input type="hidden" name="courseId" value={course.id} />
+                    <button class="unselect">Unselect {course.code}</button>
+                  </form>
+                )
+              }
             </article>
           ))
         }
